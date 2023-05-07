@@ -1,0 +1,119 @@
+---
+title: "Initial"
+author: "Gareth Edwards"
+date: "`r Sys.Date()`"
+output: pdf_document
+  # pdf_document:
+  #   number_sections: TRUE
+
+geometry: "left = 2.5cm, right = 2cm, top = 2cm, bottom = 2cm"
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{sectsty}
+  - \usepackage{amsmath}
+  - \usepackage{paralist}
+  - \usepackage{setspace}\spacing{1.5}
+  - \usepackage{fancyhdr}
+  - \usepackage{lastpage}
+  - \usepackage{dcolumn}
+  - \usepackage{natbib}\bibliographystyle{apa}
+  - \usepackage[nottoc, numbib]{tocbibind}
+  - \usepackage{graphicx}
+  - \usepackage{subcaption}
+  - \usepackage[font=small,labelfont=bf]{caption}
+# bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\allsectionsfont{\raggedright}
+\subsectionfont{\raggedright}
+\subsubsectionfont{\raggedright}
+
+\pagenumbering{gobble}
+
+\begin{centering}
+
+\vspace{3cm}
+
+```{r uni_logo, echo=FALSE, out.width="20%"}
+knitr::include_graphics("img/UCTlogo.png")
+```
+
+\vspace{1cm}
+
+\Large
+{\bf The University of Cape Town}
+
+\Large
+{\bf Department of Statistical Sciences}
+
+\Large
+{\bf Faculty of Science}
+
+\vspace{1cm}
+
+\Large
+\doublespacing
+{\bf Using state-space time series analysis on wetland bird species to formulate effective bioindicators in the Barberspan wetland}
+
+\vspace{1 cm}
+
+\normalsize
+\singlespacing
+By
+
+\vspace{0.5 cm}
+
+\Large
+
+{\bf Gareth Edwards}
+
+\normalsize
+Supervisors
+
+\Large
+{\bf Res Altwegg}\\{\bf Birgit Erni}
+
+\vspace{1.5 cm}
+
+Minor Dissertation presented for the degree of M.Sc. Data Science \\ in the \\ Department of Statistical Sciences \\ Faculty of Science \\ University of Cape Town
+
+\vspace{1.5 cm}
+
+\normalsize
+January 2022
+
+\end{centering}
+
+\newpage
+
+\pagenumbering{gobble}
+
+\begin{centering}
+
+{\bf Abstract}
+
+\end{centering}
+
+\spacing{1.5}
+
+An abstract goes here
+
+\pagenumbering{roman}
+
+\newpage
+
+\centering
+\raggedright
+\newpage
+\tableofcontents
+
+\newpage
+
+\pagenumbering{arabic}
+```{r intro, child = 'introduction.Rmd'}
+```
