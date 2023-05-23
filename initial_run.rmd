@@ -22,7 +22,10 @@ header-includes:
   - \usepackage{graphicx}
   - \usepackage{subcaption}
   - \usepackage[font=small,labelfont=bf]{caption}
-# bibliography: bibliography.bib
+bibliography: bibliography.bib
+nocite: |
+  @ConventionBiologicalDiversity2020
+  @fitzpatrickinstituteofafricanornithologyCWACCoordinatedWaterbird2020
 ---
 
 ```{r setup, include=FALSE}
@@ -116,4 +119,10 @@ An abstract goes here
 
 \pagenumbering{arabic}
 ```{r intro, child = 'introduction.Rmd'}
+```
+
+
+\newpage
+
+```{r biblio, child = 'bibliography.Rmd'}
 ```
