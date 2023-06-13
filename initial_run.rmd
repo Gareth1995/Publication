@@ -1,10 +1,8 @@
 ---
-title: "Initial"
-author: "Gareth Edwards"
-date: "`r Sys.Date()`"
-output: pdf_document
-  # pdf_document:
-  #   number_sections: TRUE
+title: " "
+output: 
+  pdf_document:
+    number_sections: TRUE
 
 geometry: "left = 2.5cm, right = 2cm, top = 2cm, bottom = 2cm"
 fontsize: 11pt
@@ -29,7 +27,14 @@ nocite: |
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+# knitr::opts_chunk$set(results = 'hide')
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(fig.keep = 'all')
+#knitr::opts_chunk$set(fig.pos = 'H')
+knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
 ```
 
 \allsectionsfont{\raggedright}
@@ -120,7 +125,10 @@ An abstract goes here
 \pagenumbering{arabic}
 ```{r intro, child = 'introduction.Rmd'}
 ```
+\newpage
 
+```{r intro, child = 'results.Rmd'}
+```
 
 \newpage
 
