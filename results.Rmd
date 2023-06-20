@@ -10,11 +10,12 @@ Figures that should be included:
 - Combined bird count fluctuations over time in barberspan (summer and winter counts).
 ```{r combined_counts}
 
-library('tidyr')
-library('dplyr')
-library('ggplot2')
-library("imputeTS")
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(imputeTS)
 library(jagsUI)
+library(vegan)
 
 # add up all bird counts for each year in Barberspan
 load('data/barberspan_counts.RData')
@@ -65,7 +66,13 @@ ggplot(b_counts, aes(x=years)) +
 # apply ssm model to combined counts
 jags_analysis <- function(bird_df){
   # bird_df = year_counts
-
+  
+  # select all rows where season != O
+  bird_df = bird_df %>% filter(season != "O")
+  
+  # fill in missing year values
+  bird_df = bird_df %>% tidyr::complete(years = min(years):max(years), nesting(season))
+  
   # convert to log counts for jags
   bird_df <- bird_df %>%
     mutate(logCounts = log(as.numeric(bird_df$counts) + 1))
@@ -287,7 +294,152 @@ lpiPlot_w$lpi_plot
 
 
 - Plot of exponentiated Shannon index calculated for overall summer and winter counts.
+```{r jags_per_species}
+
+# calculate jags output for each species in Barberspan counts
+jags_per_bird = list()
+
+# get dataframe into correct format for jags analysis
+for (i in 1:(length(barberspan_counts)-2)){
+  bird_name = colnames(barberspan_counts)[2+i]
+  abird = as.data.frame(cbind("years" = barberspan_counts$Year,
+                              "season" = barberspan_counts$Season,
+                              "Counts" = barberspan_counts[,2+i]))
+  abird$Counts = as.numeric(abird$Counts)
+  abird$years = as.numeric(abird$years)
+  
+  abird = abird %>% 
+    group_by(years, season) %>%
+    summarise(counts = sum(Counts, na.rm=TRUE)) %>%
+    ungroup()
+  
+  # perform jags analysis on each bird in the dataframe
+  jags_per_bird[[i]] <- jags_analysis(as.data.frame(abird))
+}
+
+```
+
+```{r Shannon_index_summer}
+
+# create function that calculates shannon or simpson index on posterior output 
+shan_simp <- function(jag_list, season, index){
+  
+  # create empty dataframe to store exponentiated shannon values
+  shan_simp_df <- data.frame('lower' = 0, 'med' = 0, 'upper' = 0)
+  
+  for(i in 1:26){
+    
+    # get all year i mu_t values for each species
+    jags_species_ayear <- lapply(jags_per_bird, function(x){
+      if(season=='summer'){
+        return (x$sims.list$mu_t[,i]) # get all year i's summer counts for each species
+      }else{
+        return (x$sims.list$mu_wt[,i]) # get all year i's winter counts for each species
+      }
+    })
+    
+    # run the diversity() function on the year i df
+    shan_simp_df <- rbind(shan_simp_df,
+                         quantile(diversity(exp(as.data.frame(jags_species_ayear)),
+                                            index = index),
+                                  probs = c(0.025,0.5,0.975)))
+  }
+    
+    if (index == 'shannon'){
+      shan_simp_df <- exp(shan_simp_df[2:nrow(shan_simp_df),])
+    }else{
+      shan_simp_df <- shan_simp_df[2:nrow(shan_simp_df),]
+    }
+  
+  return(shan_simp_df)
+    
+}
+```
+
+```{r calculate_shan}
+summer_shan = shan_simp(jags_per_bird, 'summer', 'shannon')
+winter_shan = shan_simp(jags_per_bird, 'winter', 'shannon')
+```
+
+
+```{r plot_shannon}
+
+# shannon index plot for summer
+summer_shan = cbind(summer_shan, 'years' = unique(b_counts$years))
+summer_shan_plot = ggplot(summer_shan, aes(x = years)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
+  geom_line(aes(y = med, color = 'red')) +
+    scale_x_continuous(breaks = seq(min(summer_shan$years),
+                                    max(summer_shan$years),
+                                    by = 1)) +
+    labs(title = 'Exponentiated shannon index for summer',
+         y = 'Exponentiated Shannon Index',
+         x = 'Years') +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = 'none')
+
+# shannon index plot for winter
+winter_shan = cbind(winter_shan, 'years' = unique(b_counts$years))
+winter_shan_plot = ggplot(winter_shan, aes(x = years)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
+  geom_line(aes(y = med, color = 'red')) +
+    scale_x_continuous(breaks = seq(min(winter_shan$years),
+                                    max(winter_shan$years),
+                                    by = 1)) +
+    labs(title = 'Exponentiated shannon index for winter',
+         y = 'Exponentiated Shannon Index',
+         x = 'Years') +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = 'none')
+```
+
+```{r}
+summer_shan_plot
+winter_shan_plot
+```
+
+
 - Plot of Simpson index calculated for overall summer and winter counts.
+```{r calculate_simpson}
+summer_simp = shan_simp(jags_per_bird, 'summer', 'simpson')
+winter_simp = shan_simp(jags_per_bird, 'winter', 'simpson')
+```
+
+```{r plot_simpson}
+
+# simpson index plot for summer
+summer_simp = cbind(summer_simp, 'years' = unique(b_counts$years))
+summer_simp_plot <- ggplot(summer_simp, aes(x = years)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
+  geom_line(aes(y = med, color = 'red')) +
+    scale_x_continuous(breaks = seq(min(summer_simp$years),
+                                    max(summer_simp$years),
+                                    by = 1)) +
+    labs(title = 'Simpson index for summer',
+         y = 'Simpson Index',
+         x = 'Years') +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = 'none')
+
+# simpson index plot for winter
+winter_simp = cbind(winter_simp, 'years' = unique(b_counts$years))
+winter_simp_plot <- ggplot(winter_simp, aes(x = years)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
+  geom_line(aes(y = med, color = 'red')) +
+    scale_x_continuous(breaks = seq(min(winter_simp$years),
+                                    max(winter_simp$years),
+                                    by = 1)) +
+    labs(title = 'Simpson index for winter',
+         y = 'Simpson Index',
+         x = 'Years') +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = 'none')
+```
+
+```{r}
+summer_simp_plot
+winter_simp_plot
+```
 
 To show how the SSM performs on many counts compared to comparatively less counts.
 - Plot of single bird species (abundant) count fluctuation over time
@@ -299,7 +451,7 @@ To show how the SSM performs on many counts compared to comparatively less count
 plots are displayed separately for summer and winter counts.
 
 The story:
-bird count data is useful to see the abundance fluctuations overtime which could be indicative of changing factors in their ecosystem. Sudden drops could be cause for concern, or sudden peaks in a specific species and drops in others could be an alarm for invasive species. However, bird counts alone won't tell the viewer much. Furthermore, we see missing values that need to be filled in, and f 
+bird count data is useful to see the abundance fluctuations overtime which could be indicative of changing factors in their ecosystem. Sudden drops could be cause for concern, or sudden peaks in a specific species and drops in others could be an alarm for invasive species. However, bird counts alone won't tell the viewer much. 
 
 
 
