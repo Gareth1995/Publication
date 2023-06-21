@@ -26,35 +26,35 @@ summer_counts = barberspan_counts
 
 # sum up each bird count column for each year
 b_counts = rowSums(summer_counts[3:43], na.rm = T) # sum across rows
-b_counts = as.data.frame(cbind(years = summer_counts$Year,
-                                  season = summer_counts$Season,
+b_counts = as.data.frame(cbind(Year = summer_counts$Year,
+                                  Season = summer_counts$Season,
                                   counts = b_counts)) 
 b_counts$counts = as.numeric(b_counts$counts)
-b_counts$years = as.numeric(b_counts$years)
+b_counts$Year = as.numeric(b_counts$Year)
 
 # select all rows where season != O
-b_counts = b_counts %>% filter(season != "O")
+b_counts = b_counts %>% filter(Season != "O")
 
 # group by year and sum counts
 b_counts = b_counts %>%
-  group_by(years, season) %>%
+  group_by(Year, Season) %>%
   summarise(counts = sum(counts)) %>%
   ungroup()
 
 # fill in missing year values
-b_counts = b_counts %>% tidyr::complete(years = min(years):max(years), nesting(season))
+b_counts = b_counts %>% tidyr::complete(Year = min(Year):max(Year), nesting(Season))
 
 # plot summer fluctuation plot
-ggplot(b_counts, aes(x=years)) +
+ggplot(b_counts, aes(x=Year)) +
   geom_line(aes(y=counts)) +
   geom_point(aes(y=counts)) +
-  facet_grid(rows = vars(season)) +
+  facet_grid(rows = vars(Season)) +
   labs(title = "Barberspan Counts",
        y = "Combined Counts") +
 
   scale_x_continuous("Years",
-                     labels = as.character(b_counts$years),
-                     breaks = as.numeric(b_counts$years)) +
+                     labels = as.character(b_counts$Year),
+                     breaks = as.numeric(b_counts$Year)) +
   theme(axis.text.x = element_text(angle = 90))
 
 ```
@@ -63,23 +63,46 @@ ggplot(b_counts, aes(x=years)) +
 - SSM fitted time series to those counts.
 ```{r ssm_fit_combined_counts, results='hide'}
 
-# apply ssm model to combined counts
-jags_analysis <- function(bird_df){
-  # bird_df = year_counts
+# processing data:
+# function to ensure the dataset has one year-season pair per count
+# contains correct data types
+# create log counts column
+process_data <- function(bird_df){
+  
+  # convert to correct data types
+  bird_df$counts = as.numeric(bird_df$counts)
+  bird_df$Year = as.numeric(bird_df$Year)
   
   # select all rows where season != O
-  bird_df = bird_df %>% filter(season != "O")
+  bird_df = bird_df %>% filter(Season != "O")
   
+  # group by year and sum counts
+  bird_df = bird_df %>%
+    group_by(Year, Season) %>%
+    summarise(counts = sum(counts, na.rm = TRUE)) %>%
+    ungroup()
+
   # fill in missing year values
-  bird_df = bird_df %>% tidyr::complete(years = min(years):max(years), nesting(season))
+  bird_df = bird_df %>% tidyr::complete(Year = min(Year):max(Year), nesting(Season))
+  
+  # convert any NA values to 0
+  bird_df[bird_df==0] <- NA
   
   # convert to log counts for jags
   bird_df <- bird_df %>%
     mutate(logCounts = log(as.numeric(bird_df$counts) + 1))
+  
+  return (bird_df)
+}
+
+# apply ssm model to combined counts
+jags_analysis <- function(bird_df){
+  # bird_df = b_counts
+  bird_df <- process_data(bird_df)
 
   # get summer and winter count lengths
-  summer <- bird_df[which(bird_df$season == 'S'),]
-  winter <- bird_df[which(bird_df$season == 'W'),]
+  summer <- bird_df[which(bird_df$Season == 'S'),]
+  winter <- bird_df[which(bird_df$Season == 'W'),]
 
   # data list for jags analysis
   data_jags <- list(summer = summer$logCounts,
@@ -127,19 +150,19 @@ ts_jag_plot <- function(jag.model, bird_df, title){
   # bird_df <- b_counts
   # bird_df <- na_replace(bird_df, 0) # convert na values to 0
   # title <- 'Combined Barberspan bird counts'
-
-  bird_df <- bird_df %>% mutate(logCounts = log(as.numeric(bird_df$counts) + 1))
+  bird_df <- process_data(bird_df)
+  # bird_df <- bird_df %>% mutate(logCounts = log(as.numeric(bird_df$counts) + 1))
 
   sEstimated <- jag.model$mean$mu_t
   sLower <- jag.model$q2.5$mu_t
   sUpper <- jag.model$q97.5$mu_t
 
   # separating the summer and winter counts
-  summer <- bird_df[which(bird_df$season == 'S'),]
-  winter <- bird_df[which(bird_df$season == 'W'),]
+  summer <- bird_df[which(bird_df$Season == 'S'),]
+  winter <- bird_df[which(bird_df$Season == 'W'),]
 
   # storing data in data frames
-  summerdf <- data.frame(Year = summer$years,
+  summerdf <- data.frame(Year = summer$Year,
                          s_estimated = sEstimated,
                          s_counts = summer$logCounts,
                          lower = sLower,
@@ -150,7 +173,7 @@ ts_jag_plot <- function(jag.model, bird_df, title){
   wLower <- jag.model$q2.5$mu_wt
   wUpper <- jag.model$q97.5$mu_wt
 
-  winterdf <- data.frame(Year = winter$years,
+  winterdf <- data.frame(Year = winter$Year,
                          w_estimated = wEstimated,
                          w_counts = winter$logCounts,
                          lower = wLower,
@@ -175,8 +198,8 @@ ts_jag_plot <- function(jag.model, bird_df, title){
          y = "log counts",
          x = "") +
     scale_x_discrete("",
-                       labels = as.character(bird_df$years),
-                       breaks = as.numeric(bird_df$years)) +
+                       labels = as.character(bird_df$Year),
+                       breaks = as.numeric(bird_df$Year)) +
 
     theme(axis.text.x = element_text(angle = 90),
           axis.text.x.bottom = element_blank(),
@@ -199,8 +222,8 @@ ts_jag_plot <- function(jag.model, bird_df, title){
          x = "Years") +
 
     scale_x_continuous("Years",
-                     labels = as.character(bird_df$years),
-                     breaks = as.numeric(bird_df$years)) +
+                     labels = as.character(bird_df$Year),
+                     breaks = as.numeric(bird_df$Year)) +
 
     theme(axis.text.x = element_text(angle = 90),
           text = element_text(size = 10),
@@ -261,14 +284,14 @@ LPI <- function(posterior_output, title, counts){
   perc_change_df = as.data.frame(cbind(mu=means,
                                        upper=q975,
                                        lower=q25,
-                                       years=unique(counts$years)))
+                                       years=unique(counts$Year)))
   
   # display the ribbon plot
   lpi_plot <- ggplot(perc_change_df, aes(x = years)) +
     geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
     geom_line(aes(y = mu, color = "red"), lwd = 1) +
     geom_hline(yintercept=0, linetype = 'dashed') +
-    scale_x_continuous(breaks = seq(min(counts$years), max(counts$years), by = 1)) +
+    scale_x_continuous(breaks = seq(min(counts$Year), max(counts$Year), by = 1)) +
     labs(title = title, y = "Average yearly percentage change", x = "") +
     theme(axis.text.x = element_text(angle = 90),
           legend.position = 'none')
@@ -294,7 +317,7 @@ lpiPlot_w$lpi_plot
 
 
 - Plot of exponentiated Shannon index calculated for overall summer and winter counts.
-```{r jags_per_species}
+```{r jags_per_species, results='hide', message=FALSE}
 
 # calculate jags output for each species in Barberspan counts
 jags_per_bird = list()
@@ -302,16 +325,16 @@ jags_per_bird = list()
 # get dataframe into correct format for jags analysis
 for (i in 1:(length(barberspan_counts)-2)){
   bird_name = colnames(barberspan_counts)[2+i]
-  abird = as.data.frame(cbind("years" = barberspan_counts$Year,
-                              "season" = barberspan_counts$Season,
-                              "Counts" = barberspan_counts[,2+i]))
-  abird$Counts = as.numeric(abird$Counts)
-  abird$years = as.numeric(abird$years)
+  abird = as.data.frame(cbind("Year" = barberspan_counts$Year,
+                              "Season" = barberspan_counts$Season,
+                              "counts" = barberspan_counts[,2+i]))
+  # abird$Counts = as.numeric(abird$Counts)
+  # abird$years = as.numeric(abird$years)
   
-  abird = abird %>% 
-    group_by(years, season) %>%
-    summarise(counts = sum(Counts, na.rm=TRUE)) %>%
-    ungroup()
+  # abird = abird %>% 
+  #   group_by(years, season) %>%
+  #   summarise(counts = sum(Counts, na.rm=TRUE)) %>%
+  #   ungroup()
   
   # perform jags analysis on each bird in the dataframe
   jags_per_bird[[i]] <- jags_analysis(as.data.frame(abird))
@@ -365,7 +388,7 @@ winter_shan = shan_simp(jags_per_bird, 'winter', 'shannon')
 ```{r plot_shannon}
 
 # shannon index plot for summer
-summer_shan = cbind(summer_shan, 'years' = unique(b_counts$years))
+summer_shan = cbind(summer_shan, 'years' = unique(b_counts$Year))
 summer_shan_plot = ggplot(summer_shan, aes(x = years)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
   geom_line(aes(y = med, color = 'red')) +
@@ -379,7 +402,7 @@ summer_shan_plot = ggplot(summer_shan, aes(x = years)) +
           legend.position = 'none')
 
 # shannon index plot for winter
-winter_shan = cbind(winter_shan, 'years' = unique(b_counts$years))
+winter_shan = cbind(winter_shan, 'years' = unique(b_counts$Year))
 winter_shan_plot = ggplot(winter_shan, aes(x = years)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
   geom_line(aes(y = med, color = 'red')) +
@@ -408,7 +431,7 @@ winter_simp = shan_simp(jags_per_bird, 'winter', 'simpson')
 ```{r plot_simpson}
 
 # simpson index plot for summer
-summer_simp = cbind(summer_simp, 'years' = unique(b_counts$years))
+summer_simp = cbind(summer_simp, 'years' = unique(b_counts$Year))
 summer_simp_plot <- ggplot(summer_simp, aes(x = years)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
   geom_line(aes(y = med, color = 'red')) +
@@ -422,7 +445,7 @@ summer_simp_plot <- ggplot(summer_simp, aes(x = years)) +
           legend.position = 'none')
 
 # simpson index plot for winter
-winter_simp = cbind(winter_simp, 'years' = unique(b_counts$years))
+winter_simp = cbind(winter_simp, 'years' = unique(b_counts$Year))
 winter_simp_plot <- ggplot(winter_simp, aes(x = years)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
   geom_line(aes(y = med, color = 'red')) +
@@ -443,10 +466,50 @@ winter_simp_plot
 
 To show how the SSM performs on many counts compared to comparatively less counts.
 - Plot of single bird species (abundant) count fluctuation over time
-- Plot of single bird species (less abundant) count fluctuation over time.
+```{r abundant_bird_212}
+# apply jags analysis for red-knobbed coot
+redKnobbedCoot = barberspan_counts %>% select(Year, Season, counts = `Red-knobbed Coot`)
+redKnobbedJags = jags_analysis(redKnobbedCoot)
+
+```
+
 - SSM fitted plot for abundant bird
+```{r plot_red_knobbed_coot}
+redKnobbedPlot = ts_jag_plot(redKnobbedJags, redKnobbedCoot, "Jags analysis output for Red-Knobbed Coot")
+
+redKnobbedPlot$summer
+redKnobbedPlot$winter
+
+```
+
+- Plot of single bird species (less abundant) count fluctuation over time.
+```{r rare_bird_Marsh_owl}
+load('data/all_Barberspan_counts.RData')
+
+# apply jags analysis for marsh owl
+MarshOwl = all_barberspan_counts %>% select(Year, Season, counts = `Marsh Owl`)
+MarshOwlJags = jags_analysis(MarshOwl)
+
+```
 - SSM fitted plot for less abundant bird
+
+```{r plot_marsh_owl_jags}
+MarshOwlPlot = ts_jag_plot(MarshOwlJags, MarshOwl, "Jags analysis output for Marsh Owl")
+
+MarshOwlPlot$summer
+MarshOwlPlot$winter
+```
+
 - MCMC output for each to show convergence (to compare how well the model fits in either situation)
+
+```{r traceplots_coot}
+traceplot(redKnobbedJags, 'mu_t')
+```
+
+```{r traceplots_grebe}
+traceplot(MarshOwlJags, 'mu_t')
+
+```
 
 plots are displayed separately for summer and winter counts.
 
