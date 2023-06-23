@@ -5,9 +5,8 @@ output: pdf_document
 
 # Results
 
-Figures that should be included:
+The combined bird counts of Barberspan from 1993 to 2018 are plotted in figure (x). The plot is broken up into summer and winter counts due to the biannual data capturing process that  the CWAC protocols require. The plot shows fairly random variations of bird counts over the years, for both summer and winter counts, with multiple missing values in the dataset. Applying the state-space time series model to this data will approximate these missing values based on the previous existing values.
 
-- Combined bird count fluctuations over time in barberspan (summer and winter counts).
 ```{r combined_counts}
 
 library(tidyr)
@@ -20,14 +19,10 @@ library(vegan)
 # add up all bird counts for each year in Barberspan
 load('data/barberspan_counts.RData')
 
-# filter for summer
-# summer_counts = barberspan_counts %>% filter(Season=='S')
-summer_counts = barberspan_counts
-
-# sum up each bird count column for each year
-b_counts = rowSums(summer_counts[3:43], na.rm = T) # sum across rows
-b_counts = as.data.frame(cbind(Year = summer_counts$Year,
-                                  Season = summer_counts$Season,
+# sum up each bird count row for each year
+b_counts = rowSums(barberspan_counts[3:43], na.rm = T) # sum across rows
+b_counts = as.data.frame(cbind(Year = barberspan_counts$Year,
+                                  Season = barberspan_counts$Season,
                                   counts = b_counts)) 
 b_counts$counts = as.numeric(b_counts$counts)
 b_counts$Year = as.numeric(b_counts$Year)
@@ -59,8 +54,10 @@ ggplot(b_counts, aes(x=Year)) +
 
 ```
 
+A state-space time series model was fit to the combined bird counts of the Barberspan wetland using the JAGS (Just Another Gibbs Sampler) package. The model was fit on the summer and winter counts separately. The output is posterior distributions for summer and winter counts for each year. 
 
-- SSM fitted time series to those counts.
+The hyperparameters for number of iterations and burnin for the Gibbs Sampler was 10 000 and 5000 respectively. The number of iterations refers to the number of times the Gibbs Sampler samples from the probability distribution that represents the summer or winter counts. The "burn-in" hyperparameter refers to the first few iterations that are to be discarded given that these first few iterations are usually less probable outcomes, but as the model runs for a longer period of iterations, the outcomes tend toward a higher probability region and thus are more likely outcomes. This generates an output of 15 000 count values for each year with the first 5000 iterations being the "burn-in" iterations. The state-space time series model output is displayed in figure (x). The diagnostic output of the state-space time series model is presented in Appendix (B) where trace plots of each MCMC chain is visualised to illustrate the convergence in count values for each year.
+
 ```{r ssm_fit_combined_counts, results='hide'}
 
 # processing data:
@@ -68,14 +65,14 @@ ggplot(b_counts, aes(x=Year)) +
 # contains correct data types
 # create log counts column
 process_data <- function(bird_df){
-  
+
   # convert to correct data types
   bird_df$counts = as.numeric(bird_df$counts)
   bird_df$Year = as.numeric(bird_df$Year)
-  
+
   # select all rows where season != O
   bird_df = bird_df %>% filter(Season != "O")
-  
+
   # group by year and sum counts
   bird_df = bird_df %>%
     group_by(Year, Season) %>%
@@ -84,14 +81,14 @@ process_data <- function(bird_df){
 
   # fill in missing year values
   bird_df = bird_df %>% tidyr::complete(Year = min(Year):max(Year), nesting(Season))
-  
+
   # convert any NA values to 0
   bird_df[bird_df==0] <- NA
-  
+
   # convert to log counts for jags
   bird_df <- bird_df %>%
     mutate(logCounts = log(as.numeric(bird_df$counts) + 1))
-  
+
   return (bird_df)
 }
 
@@ -146,16 +143,18 @@ analysis = jags_analysis(b_counts)
 # plot the output
 ts_jag_plot <- function(jag.model, bird_df, title){
 
-  # jag.model <- analysis
-  # bird_df <- b_counts
-  # bird_df <- na_replace(bird_df, 0) # convert na values to 0
-  # title <- 'Combined Barberspan bird counts'
+  # get data in correct format
   bird_df <- process_data(bird_df)
-  # bird_df <- bird_df %>% mutate(logCounts = log(as.numeric(bird_df$counts) + 1))
 
-  sEstimated <- jag.model$mean$mu_t
-  sLower <- jag.model$q2.5$mu_t
-  sUpper <- jag.model$q97.5$mu_t
+  # remove first 5000 iterations and calculate the mean, upper and lower bounds
+  # sEstimated <- jag.model$mean$mu_t
+  # sLower <- jag.model$q2.5$mu_t
+  # sUpper <- jag.model$q97.5$mu_t
+
+  summer_jag_df <- as.data.frame(jag.model$sims.list$mu_t)[5000:15000,] # remove first 5000 iterations
+  sEstimated <- apply(summer_jag_df, MARGIN = 2, mean)
+  sLower <- apply(summer_jag_df, MARGIN = 2, quantile, probs = c(0.025))
+  sUpper <- apply(summer_jag_df, MARGIN = 2, quantile, probs = c(0.975))
 
   # separating the summer and winter counts
   summer <- bird_df[which(bird_df$Season == 'S'),]
@@ -168,10 +167,11 @@ ts_jag_plot <- function(jag.model, bird_df, title){
                          lower = sLower,
                          upper = sUpper)
 
-  #lambda <- jag.model$mean$lambda
-  wEstimated <- jag.model$mean$mu_wt
-  wLower <- jag.model$q2.5$mu_wt
-  wUpper <- jag.model$q97.5$mu_wt
+
+  winter_jag_df <- as.data.frame(jag.model$sims.list$mu_wt)[5000:15000,] # remove first 5000 iterations
+  wEstimated <- apply(winter_jag_df, MARGIN = 2, mean)
+  wLower <- apply(winter_jag_df, MARGIN = 2, quantile, probs = c(0.025))
+  wUpper <- apply(winter_jag_df, MARGIN = 2, quantile, probs = c(0.975))
 
   winterdf <- data.frame(Year = winter$Year,
                          w_estimated = wEstimated,
@@ -184,7 +184,7 @@ ts_jag_plot <- function(jag.model, bird_df, title){
   winterdf <- arrange(winterdf, Year)
 
   # plotting the observed and estimated population sizes produced by the state process
-      # summer
+  # summer
   summer_plot <- ggplot(summerdf, aes(x = Year, group = 1)) +
 
     geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
@@ -238,22 +238,26 @@ model_plot = ts_jag_plot(analysis, b_counts, "Combined Barberspan bird counts")
 
 ```
 
-```{r plot_the_plot, out.height="40%", out.width=800}
+```{r plot_the_plot,  out.height="40%", out.width=800}
+
 par(mfrow=c(1,2))
 model_plot$summer
 model_plot$winter
 
+# fig.cap= "state-space time series output applied to the combined bird counts, separated by season, of Barberspan wetland. The grey area surrounding the dotted line is the 95% credible interval around the population level produced by the MCMC output",
+
 ```
 
-- Plot of LPI generated using SSM output for calculations (summer plot).
+From the 10 000 yearly count values generated from the Gibbs Sampler, we are able to calculate various bioindices. We demonstrate the benefits of using posterior output to calculate bioindices by calculating the LPI, exponentiated Shannon index and the Simpson index using the 10 000 yearly posterior values.
+
+An LPI is calculated for each year and the mean, 2.5th and 97.5th percentile is generated from the 10 000 LPI values generated for each year. The output of this LPI calculations is shown in figure (x).
+
 ```{r LPI_plot}
+
 # method to calculate LPI from jags output and show resulting plot
 LPI <- function(posterior_output, title, counts){
 
-  # posterior_output = as.data.frame(analysis$sims.list$mu_t)
-  # title = 'Summer LPI'
-  # counts = b_counts
-  
+
   # empty data frame to be populated with
   perc_change_matrix = matrix(nrow = nrow(posterior_output), ncol = ncol(posterior_output))
   for (col in 1:ncol(posterior_output)){
@@ -268,24 +272,24 @@ LPI <- function(posterior_output, title, counts){
                                           posterior_output[index,col-1])*100
       }
     }
-  } 
-  
+  }
+
   # apply mean to each column of perc_change matrix
   perc_change_matrix = as.data.frame(perc_change_matrix)
   means = apply(perc_change_matrix, 2, mean)
-  
+
   # find 2.5% quantile of each column
   q25 = apply(perc_change_matrix, 2, quantile, probs=c(0.025))
-  
+
   # find 97.5% quantile of each column
   q975 = apply(perc_change_matrix, 2, quantile, probs=c(0.975))
-  
+
   # column bind all 3
   perc_change_df = as.data.frame(cbind(mu=means,
                                        upper=q975,
                                        lower=q25,
                                        years=unique(counts$Year)))
-  
+
   # display the ribbon plot
   lpi_plot <- ggplot(perc_change_df, aes(x = years)) +
     geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80") +
@@ -302,21 +306,28 @@ LPI <- function(posterior_output, title, counts){
 ```
 
 ```{r plot_lpi_summer}
-posterior_output_s = as.data.frame(analysis$sims.list$mu_t)
+posterior_output_s = as.data.frame(analysis$sims.list$mu_t)[5000:15000,]
 lpiPlot = LPI(posterior_output_s, "Summer LPI", b_counts)
-lpiPlot$lpi_plot
+# lpiPlot$lpi_plot
 
 ```
 
 - Plot of LPI generated using SSM output for calculations (winter plot).
 ```{r plot_lpi_winter}
-posterior_output_w = as.data.frame(analysis$sims.list$mu_wt)
+posterior_output_w = as.data.frame(analysis$sims.list$mu_wt)[5000:15000,]
 lpiPlot_w = LPI(posterior_output_w, "Winter LPI", b_counts)
-lpiPlot_w$lpi_plot
+# lpiPlot_w$lpi_plot
 ```
 
+```{r plot_summer_winter_lpi, out.height="40%", out.width=800}
+lpiPlot$lpi_plot
+lpiPlot_w$lpi_plot
 
-- Plot of exponentiated Shannon index calculated for overall summer and winter counts.
+# fig.cap="The LPI displaying the average yearly percentage change averaged across all birds in the Barberspan wetland. The grey area around the trend line represents the 2.5th and 97.5th percentile.",
+```
+
+The exponentiated Shannon index was also calculated using the posterior output. An exponentiated Shannon index was calculated for each year. This resulted in 10 000 exponentiateed Shannon index values for each year. The mean, 2.5th and 97.5th percentile was then calculated from the 10 000 index values. The same approach was conducted when calculating the Simpson index for each year. The outputs of the exponentiated Shannon and Simpson index calculations are displayed in figure (x) and (x2) respectively.
+
 ```{r jags_per_species, results='hide', message=FALSE}
 
 # calculate jags output for each species in Barberspan counts
@@ -328,14 +339,8 @@ for (i in 1:(length(barberspan_counts)-2)){
   abird = as.data.frame(cbind("Year" = barberspan_counts$Year,
                               "Season" = barberspan_counts$Season,
                               "counts" = barberspan_counts[,2+i]))
-  # abird$Counts = as.numeric(abird$Counts)
-  # abird$years = as.numeric(abird$years)
-  
-  # abird = abird %>% 
-  #   group_by(years, season) %>%
-  #   summarise(counts = sum(Counts, na.rm=TRUE)) %>%
-  #   ungroup()
-  
+
+
   # perform jags analysis on each bird in the dataframe
   jags_per_bird[[i]] <- jags_analysis(as.data.frame(abird))
 }
@@ -344,38 +349,38 @@ for (i in 1:(length(barberspan_counts)-2)){
 
 ```{r Shannon_index_summer}
 
-# create function that calculates shannon or simpson index on posterior output 
+# create function that calculates shannon or simpson index on posterior output
 shan_simp <- function(jag_list, season, index){
-  
+
   # create empty dataframe to store exponentiated shannon values
   shan_simp_df <- data.frame('lower' = 0, 'med' = 0, 'upper' = 0)
-  
+
   for(i in 1:26){
-    
+
     # get all year i mu_t values for each species
     jags_species_ayear <- lapply(jags_per_bird, function(x){
       if(season=='summer'){
-        return (x$sims.list$mu_t[,i]) # get all year i's summer counts for each species
+        return (x$sims.list$mu_t[5000:15000,i]) # get all year i's summer counts for each species
       }else{
-        return (x$sims.list$mu_wt[,i]) # get all year i's winter counts for each species
+        return (x$sims.list$mu_wt[5000:15000,i]) # get all year i's winter counts for each species
       }
     })
-    
+
     # run the diversity() function on the year i df
     shan_simp_df <- rbind(shan_simp_df,
                          quantile(diversity(exp(as.data.frame(jags_species_ayear)),
                                             index = index),
                                   probs = c(0.025,0.5,0.975)))
   }
-    
+
     if (index == 'shannon'){
       shan_simp_df <- exp(shan_simp_df[2:nrow(shan_simp_df),])
     }else{
       shan_simp_df <- shan_simp_df[2:nrow(shan_simp_df),]
     }
-  
+
   return(shan_simp_df)
-    
+
 }
 ```
 
@@ -416,13 +421,13 @@ winter_shan_plot = ggplot(winter_shan, aes(x = years)) +
           legend.position = 'none')
 ```
 
-```{r}
+```{r plot_shan_n_simp, out.height="40%", out.width=800}
 summer_shan_plot
 winter_shan_plot
+
+# fig.cap="Exponentiated Shannon index for Barberspan, separated by season. The grey area around the trend line represents the 2.5th and 97.5th percentile",
 ```
 
-
-- Plot of Simpson index calculated for overall summer and winter counts.
 ```{r calculate_simpson}
 summer_simp = shan_simp(jags_per_bird, 'summer', 'simpson')
 winter_simp = shan_simp(jags_per_bird, 'winter', 'simpson')
@@ -459,55 +464,32 @@ winter_simp_plot <- ggplot(winter_simp, aes(x = years)) +
           legend.position = 'none')
 ```
 
-```{r}
+```{r, out.height="40%", out.width=800}
+
 summer_simp_plot
 winter_simp_plot
+
+# fig.cap="Simpson index for Barberspan, separated by season. The grey area around the trend line represents the 2.5th and 97.5th percentile"
 ```
+could instead show output of other parameters like lambda, beta, zeta, etc. Add their trace plots to Appendix B also along with trace plots of jags analysis on combined bird species
 
 To show how the SSM performs on many counts compared to comparatively less counts.
 - Plot of single bird species (abundant) count fluctuation over time
-```{r abundant_bird_212}
-# apply jags analysis for red-knobbed coot
-redKnobbedCoot = barberspan_counts %>% select(Year, Season, counts = `Red-knobbed Coot`)
-redKnobbedJags = jags_analysis(redKnobbedCoot)
 
-```
 
 - SSM fitted plot for abundant bird
-```{r plot_red_knobbed_coot}
-redKnobbedPlot = ts_jag_plot(redKnobbedJags, redKnobbedCoot, "Jags analysis output for Red-Knobbed Coot")
-
-redKnobbedPlot$summer
-redKnobbedPlot$winter
-
-```
 
 - Plot of single bird species (less abundant) count fluctuation over time.
-```{r rare_bird_Marsh_owl}
-load('data/all_Barberspan_counts.RData')
 
-# apply jags analysis for marsh owl
-MarshOwl = all_barberspan_counts %>% select(Year, Season, counts = `Marsh Owl`)
-MarshOwlJags = jags_analysis(MarshOwl)
-
-```
 - SSM fitted plot for less abundant bird
 
-```{r plot_marsh_owl_jags}
-MarshOwlPlot = ts_jag_plot(MarshOwlJags, MarshOwl, "Jags analysis output for Marsh Owl")
 
-MarshOwlPlot$summer
-MarshOwlPlot$winter
-```
+- MCMC output for each to show convergence (to compare how well the model fits in either situation) (add MCMC traceplots to the appendix)
 
-- MCMC output for each to show convergence (to compare how well the model fits in either situation)
 
-```{r traceplots_coot}
-traceplot(redKnobbedJags, 'mu_t')
-```
 
 ```{r traceplots_grebe}
-traceplot(MarshOwlJags, 'mu_t')
+# traceplot(MarshOwlJags, 'mu_t')
 
 ```
 

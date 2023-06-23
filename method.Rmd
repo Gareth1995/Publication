@@ -1,0 +1,20 @@
+---
+title: " "
+output: pdf_document
+---
+
+# Method
+
+- explain barberspan region (location and bird counts)
+- explain CWAC dataset (its counting protocols, the data range according to years, the cleaning process and which data was used (values with more than 19 counts), but this could decrease to around 15 counts)
+
+- briefly explain MCMC models
+- briefly explain gibbs sampler
+- explain state-space time series models
+
+- outline the probability model that is being sampled from (the ssm model file)
+
+- explain JAGS used for implementing the ssm (speak about hyperparameters such as number of iterations, burn-in and number of chains)
+
+- end off with overview of how the gibbs sampler will sample from the probability distributions and how JAGS facilitates this
+
