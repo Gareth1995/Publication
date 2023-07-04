@@ -6,7 +6,6 @@ model {
   mu_t[1] ~ dunif(0,7.313) # prior for initial population size
   beta[1] ~ dunif(log(0.5), log(1.7)) # prior for initial growth rate
   lambda[1] ~ dnorm(0, 0.001)
-  q[1] = 1
 
   sigma_zeta ~ dunif(0, 2.303)
   sigma_w ~ dunif(0, 2.303)
@@ -51,28 +50,5 @@ model {
   for(w in 1:N){
     mu_wt[w] = mu_t[w] + lambda[w]
     winter[w] ~ dnorm(mu_wt[w], tau.e) # winter counts
-  }
-  
-  # calculating annual rate of change
-  #for(i in 2:N){
-  #  d[i] = log(exp(mu_t[i])/exp(mu_t[i-1]))
-  #}
-  
-  # LPI for each species 
-  #for(i in 2:N){
-  #  index[i] = index[i-1] * exp(d[i])
-  #}
-  
-  # percent increase or decrease per year (negative sign means decrease)
-  for(i in 2:N){
-    q[i] = exp(mu_t[i]) - exp(mu_t[i-1]) / exp(mu_t[i-1]) # percentage change per year
-    
-    # percentage change compared to last year
-    #p[i] = (exp(mu_t[i]) - exp(mu_t[N])) / exp(mu_t[N])
-    
-    #p[i] = mu_t[i] - mu_t[N]
-    
-    # percentage change from reference year
-    #p[i] = (exp(mu_t[i]) - exp(mu_t[5])) / exp(mu_t[5])
   }
 }

@@ -20,7 +20,7 @@ library(vegan)
 load('data/barberspan_counts.RData')
 
 # sum up each bird count row for each year
-b_counts = rowSums(barberspan_counts[3:43], na.rm = T) # sum across rows
+b_counts = rowSums(barberspan_counts[3:49], na.rm = T) # sum across rows
 b_counts = as.data.frame(cbind(Year = barberspan_counts$Year,
                                   Season = barberspan_counts$Season,
                                   counts = b_counts)) 
@@ -56,7 +56,7 @@ ggplot(b_counts, aes(x=Year)) +
 
 A state-space time series model was fit to the combined bird counts of the Barberspan wetland using the JAGS (Just Another Gibbs Sampler) package. The model was fit on the summer and winter counts separately. The output is posterior distributions for summer and winter counts for each year. 
 
-The hyperparameters for number of iterations and burnin for the Gibbs Sampler was 10 000 and 5000 respectively. The number of iterations refers to the number of times the Gibbs Sampler samples from the probability distribution that represents the summer or winter counts. The "burn-in" hyperparameter refers to the first few iterations that are to be discarded given that these first few iterations are usually less probable outcomes, but as the model runs for a longer period of iterations, the outcomes tend toward a higher probability region and thus are more likely outcomes. This generates an output of 15 000 count values for each year with the first 5000 iterations being the "burn-in" iterations. The state-space time series model output is displayed in figure (x). The diagnostic output of the state-space time series model is presented in Appendix (B) where trace plots of each MCMC chain is visualised to illustrate the convergence in count values for each year.
+The state-space time series model output is displayed in figure (x). The diagnostic output of the state-space time series model is presented in Appendix (B) where trace plots of each MCMC chain is visualised to illustrate the convergence in count values for each year.
 
 ```{r ssm_fit_combined_counts, results='hide'}
 
@@ -308,15 +308,12 @@ LPI <- function(posterior_output, title, counts){
 ```{r plot_lpi_summer}
 posterior_output_s = as.data.frame(analysis$sims.list$mu_t)[5000:15000,]
 lpiPlot = LPI(posterior_output_s, "Summer LPI", b_counts)
-# lpiPlot$lpi_plot
 
 ```
 
-- Plot of LPI generated using SSM output for calculations (winter plot).
 ```{r plot_lpi_winter}
 posterior_output_w = as.data.frame(analysis$sims.list$mu_wt)[5000:15000,]
 lpiPlot_w = LPI(posterior_output_w, "Winter LPI", b_counts)
-# lpiPlot_w$lpi_plot
 ```
 
 ```{r plot_summer_winter_lpi, out.height="40%", out.width=800}
@@ -471,32 +468,12 @@ winter_simp_plot
 
 # fig.cap="Simpson index for Barberspan, separated by season. The grey area around the trend line represents the 2.5th and 97.5th percentile"
 ```
-could instead show output of other parameters like lambda, beta, zeta, etc. Add their trace plots to Appendix B also along with trace plots of jags analysis on combined bird species
-
-To show how the SSM performs on many counts compared to comparatively less counts.
-- Plot of single bird species (abundant) count fluctuation over time
-
-
-- SSM fitted plot for abundant bird
-
-- Plot of single bird species (less abundant) count fluctuation over time.
-
-- SSM fitted plot for less abundant bird
-
-
-- MCMC output for each to show convergence (to compare how well the model fits in either situation) (add MCMC traceplots to the appendix)
-
 
 
 ```{r traceplots_grebe}
 # traceplot(MarshOwlJags, 'mu_t')
 
 ```
-
-plots are displayed separately for summer and winter counts.
-
-The story:
-bird count data is useful to see the abundance fluctuations overtime which could be indicative of changing factors in their ecosystem. Sudden drops could be cause for concern, or sudden peaks in a specific species and drops in others could be an alarm for invasive species. However, bird counts alone won't tell the viewer much. 
 
 
 

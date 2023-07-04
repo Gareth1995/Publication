@@ -35,8 +35,9 @@ save(all_barberspan_counts, file = "data/all_Barberspan_counts.RData")
 na_counts = colSums(is.na(bird_counts))
 
 # get bird ids that contain more than 19 counts
-valid_cols = names(na_counts[(nrow(bird_counts) - na_counts) > 19])
+valid_cols = names(na_counts[(nrow(bird_counts) - na_counts) > 15])
 barberspan_counts = bird_counts[valid_cols]
+barberspan_counts = cbind(info_df, barberspan_counts)
 
 save(barberspan_counts, file = "data/Barberspan_counts.RData")
 
