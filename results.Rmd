@@ -53,6 +53,28 @@ ggplot(b_counts, aes(x=Year)) +
   theme(axis.text.x = element_text(angle = 90))
 
 ```
+SHOW BAR PLOT OF 10 MOST ABUNDANT BIRDS IN BARBERSPAN
+```{r top_abundance}
+
+# get proportions of top 10 most abundant waterbirds
+cols = colSums(barberspan_counts[3:49], na.rm = T) # sum across rows
+total = sum(cols)
+inds = order(cols, decreasing=TRUE)[1:10]
+top_10 = cols[inds]
+top_10_prop = top_10/total
+top_10_df = as.data.frame(top_10_prop)
+top_10_df$names = row.names(top_10_df)
+
+# plot bar graph
+ggplot(as.data.frame(top_10_df), aes(x=names, y=top_10_prop)) +
+  geom_bar(stat="identity") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(title = "The top 10 most abundant waterbirds in Barberspan and their proportions to the overall abundance at Barberspan",
+       y = "proportion",
+       x = "waterbird names")
+
+```
+
 
 A state-space time series model was fit to the combined bird counts of the Barberspan wetland using the JAGS (Just Another Gibbs Sampler) package. The model was fit on the summer and winter counts separately. The output is posterior distributions for summer and winter counts for each year. 
 

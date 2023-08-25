@@ -5,4 +5,32 @@ output: pdf_document
 
 # Discussion
 
-- speak about credible intervals
+- Intro
+In this study, we delved into the analysis of waterbird count data using a state-space time series framework, a novel approach that models the waterbird counts by separating the observation and state error of the waterbird populations. By harnessing this methodology, we aimed to derive insights into the population dynamics of waterbirds while simultaneously assessing their ecological diversity through the calculation of three key diversity indices: the Living Planet Index (LPI), Shannon index, and Simpson index. Through the utilization of Markov Chain Monte Carlo (MCMC) sampling techniques, we not only obtained insight into the temporal trends of waterbird populations, but also quantified the multifaceted aspects of their ecological diversity. This section elaborates on the results derived from our analysis, discussing the implications of the state-space time series model and the calculated diversity indices.
+
+- Talk through what the graphs may be saying about biodiversity over time in Barberspan
+The SSM output covers both the summer and winter populations of waterbird at Barberspan. In figure (x) we see that the summer population of waterbirds seem to be increasing over time while winter populations are fairly steady with some random fluctuations.
+
+According to the LPI output we notice that the change in waterbird populations each year at Barberspan is staying fairly constant, with random fluctuations for both summer and winter. The overall waterbird population appears stable, however there are studies that show decreasing trends of migratory waterbirds in wetlands in Southern Africa. 
+
+A study on migratory waterbirds in South Africa reported that 11 of the 16 palearctic migrants investigated experienced negative trends from 2005-2009 [@barshepIdentifyingEcologicalLifehistory2017]. Another paper analysing palearctic migrants in Sandwich Harbour and Walvis Bay, Namibia, reported similar findings; four of the 12 palearctic migrants studied experienced declines while only one species experienced an increasing trend (Common Whimbrel) from 1990-2013 [@simmonsDeclinesMigrantShorebird2015]. Further studies show that Palearctic-Afrotropical migratory waterbirds are experiencing declines in abundance globally [@kirbyKeyConservationIssues2008; @deniauFlywaysHellEmpirical2022].
+
+The diversity indices in Barberspan paint a different picture compared to the population abundance. While waterbird population abundance remains fairly stable over time, waterbird diveristy seems to decrease. This is shown in figure (x) as we see a decrease in evenness over time (illustrated by the Simpson's index) and a decrease in the effective number of waterbird species over time (illustrated by the exponentiated Shannon's index). figure (bar plot) shows us the potential cause for these numbers as the Egyptian Goose and the Red-Knobbed Coot made up 70% of all waterbird counts at Barberspan
+with the Red-Knobbed Coot being most dominant making up 58% of all counts.
+
+These displays of unevenness coincides with other studies of wetland waterbirds in Southern Africa. A study conducted in a South African riverine habitat, the Shamvura stretch of the Okavango River, also found high levels of dominance among the waterbirds present in the wetland [@kopijSeasonalChangesDiversity2018]. In this study there were 6 resident waterbirds out of the 84 recorded waterbirds that were classified as dominant: African reed cormorant, African openbill, cattle egret, wattled lapwing, African darter and white-faced duck.
+
+
+- Explain results (include discussion about why the credible intervals are larger than traditional approaches (SSMs take into account observation and laten error so this means more error but more reliable credible intervals instead of lumping all uncertainty in a model in the observation error))
+
+
+- discuss why the output of this study is important (more reliable way of calculating biodiversity indices, it is a method to follow when using count data for any animal, other indices based on animal counts can be calculated too, its helpful for conservation decision makers) -> Perhaps use discussion matrix with papers and their similarities or differences.
+
+- Future work (adding covariates to decrease credible interval size, apply this method to other count data, test this approach against traditional approaches and see which is best)
+
+
+general steps
+- Talk about results (interpret results)
+- Compare it with literature
+- Explain results (why are they different from literature, are there unexpected results, etc)
+- Interpretation (why are your results important)

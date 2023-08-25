@@ -126,12 +126,15 @@ An abstract goes here
 \pagenumbering{arabic}
 ```{r intro, child = 'introduction.Rmd'}
 ```
-\newpage
 
+\newpage
+```{r method, child = 'method.Rmd'}
+```
+
+\newpage
 ```{r intro, child = 'results.Rmd'}
 ```
 
 \newpage
-
 ```{r biblio, child = 'bibliography.Rmd'}
 ```

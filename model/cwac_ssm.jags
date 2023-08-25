@@ -39,8 +39,8 @@ model {
     lambda[t+1] = lambda[t] + eps[t] # winter to summer ratio
   }
 
-  # observation process
-
+  # data model
+  
   # summer
   for(s in 1:N){
     summer[s] ~ dnorm(mu_t[s], tau.alpha) # Summer counts
