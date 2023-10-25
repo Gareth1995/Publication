@@ -5,6 +5,12 @@ output: pdf_document
 
 # Results
 
+```{r}
+library(knitr)
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, 
+                      message = FALSE, cache.lazy = FALSE)
+```
+
 The combined bird counts of Barberspan from 1993 to 2018 are plotted in figure (x). The plot is broken up into summer and winter counts due to the biannual data capturing process that  the CWAC protocols require. The plot shows fairly random variations of bird counts over the years, for both summer and winter counts, with multiple missing values in the dataset. Applying the state-space time series model to this data will approximate these missing values based on the previous existing values.
 
 ```{r combined_counts}
@@ -17,7 +23,7 @@ library(jagsUI)
 library(vegan)
 
 # add up all bird counts for each year in Barberspan
-load('data/barberspan_counts.RData')
+load('data/Barberspan_counts.RData')
 
 # sum up each bird count row for each year
 b_counts = rowSums(barberspan_counts[3:49], na.rm = T) # sum across rows
@@ -80,7 +86,7 @@ A state-space time series model was fit to the combined bird counts of the Barbe
 
 The state-space time series model output is displayed in figure (x). The diagnostic output of the state-space time series model is presented in Appendix (B) where trace plots of each MCMC chain is visualised to illustrate the convergence in count values for each year.
 
-```{r ssm_fit_combined_counts, results='hide'}
+```{r ssm_fit_combined_counts, results='hide', cache=TRUE}
 
 # processing data:
 # function to ensure the dataset has one year-season pair per count
@@ -347,7 +353,7 @@ lpiPlot_w$lpi_plot
 
 The exponentiated Shannon index was also calculated using the posterior output. An exponentiated Shannon index was calculated for each year. This resulted in 10 000 exponentiateed Shannon index values for each year. The mean, 2.5th and 97.5th percentile was then calculated from the 10 000 index values. The same approach was conducted when calculating the Simpson index for each year. The outputs of the exponentiated Shannon and Simpson index calculations are displayed in figure (x) and (x2) respectively.
 
-```{r jags_per_species, results='hide', message=FALSE}
+```{r jags_per_species, results='hide', message=FALSE, cache=TRUE}
 
 # calculate jags output for each species in Barberspan counts
 jags_per_bird = list()
