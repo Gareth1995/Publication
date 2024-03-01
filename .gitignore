@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+initial_run_cache/
+results_cache/
+initial_run_files/
+results_files/
+
+*.log
